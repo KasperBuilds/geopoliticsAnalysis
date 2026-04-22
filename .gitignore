@@ -1,0 +1,17 @@
+# Secrets
+.env
+
+# Database
+data/sentinel.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
