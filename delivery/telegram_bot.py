@@ -6,6 +6,7 @@ Handles message splitting for the 4096-character limit.
 """
 
 import asyncio
+import io
 from datetime import datetime, timezone
 
 from telegram import Bot
@@ -90,8 +91,57 @@ class TelegramDelivery:
                         disable_web_page_preview=True,
                     )
                 log.info("Sent message as plain text fallback")
-            except Exception as e2:
+            except Exception as e2:  # noqa: F841
                 log.error("Telegram send failed even without HTML: %s", str(e2))
+
+    def _format_tldr(self, briefs: list[AnalystBrief]) -> str:
+        """
+        Build a short TL;DR message — just headlines + top SG implication.
+        Designed for quick glance on mobile. Full detail lives in the PDF.
+        """
+        urgency_icons = {"CRITICAL": "🔴", "ELEVATED": "🟡", "ROUTINE": "🟢"}
+        urgency_order = {"CRITICAL": 3, "ELEVATED": 2, "ROUTINE": 1}
+
+        overall = max(briefs, key=lambda b: urgency_order.get(b.overall_urgency, 0))
+        urgency = overall.overall_urgency
+        icon = urgency_icons.get(urgency, "⚪")
+
+        now = datetime.now(timezone.utc).strftime("%d %b %Y • %H%M UTC")
+
+        lines = [
+            f"🛰️ <b>SENTINEL BRIEF</b>",
+            f"📅 {now}",
+            f"{icon} <b>{urgency}</b>",
+            "",
+        ]
+
+        # Top headlines from all analysts (max 5)
+        for brief in briefs:
+            for dev in brief.key_developments[:3]:
+                dev_icon = urgency_icons.get(dev.urgency, "⚪")
+                lines.append(f"{dev_icon} {dev.headline}")
+
+        # One key SG implication
+        for brief in briefs:
+            if brief.singapore_implications:
+                lines.extend(["", f"🇸🇬 {brief.singapore_implications[0]}"])
+                break
+
+        lines.extend(["", "📄 <i>Full report attached below.</i>"])
+
+        return "\n".join(lines)
+
+    async def send_tldr(self, briefs: list[AnalystBrief]):
+        """Send a short TL;DR summary message."""
+        if not briefs:
+            return
+        tldr = self._format_tldr(briefs)
+        log.info("Delivering TL;DR (%d chars)", len(tldr))
+        await self._send_message(tldr)
+
+    def send_tldr_sync(self, briefs: list[AnalystBrief]):
+        """Synchronous wrapper for send_tldr."""
+        asyncio.run(self.send_tldr(briefs))
 
     def _format_unified_brief(self, briefs: list[AnalystBrief]) -> str:
         """
@@ -137,16 +187,10 @@ class TelegramDelivery:
                     lines.append(f"{dev_icon} <b>[{i}] {dev.headline}</b>")
                     lines.append(f"{dev.analysis}")
                     # Show sources as clickable hyperlinks
-                    if dev.source_urls and dev.sources:
-                        links = []
-                        for url, name in zip(dev.source_urls, dev.sources):
-                            links.append(f'<a href="{url}">{name}</a>')
-                        lines.append(f"→ {' · '.join(links)}")
-                    elif dev.source_urls:
-                        links = [f'<a href="{url}">Source</a>' for url in dev.source_urls]
-                        lines.append(f"→ {' · '.join(links)}")
+                    if dev.source_urls:
+                        lines.append(f"→ {' · '.join(dev.source_urls)}")
                     elif dev.sources:
-                        lines.append(f"<i>→ {', '.join(dev.sources)}</i>")
+                        lines.append(f"→ {', '.join(dev.sources)}")
                     lines.append("")
 
             # Singapore implications
@@ -185,6 +229,68 @@ class TelegramDelivery:
     def send_briefs_sync(self, briefs: list[AnalystBrief]):
         """Synchronous wrapper for send_briefs."""
         asyncio.run(self.send_briefs(briefs))
+
+    async def _send_photo(self, image_bytes: bytes, caption: str = ""):
+        """Send an image via Telegram."""
+        if not self.bot:
+            log.info("TELEGRAM [DRY RUN]: Would send infographic (%d KB)", len(image_bytes) // 1024)
+            return
+
+        try:
+            photo_file = io.BytesIO(image_bytes)
+            photo_file.name = "sentinel_brief.png"
+            await self.bot.send_photo(
+                chat_id=self.chat_id,
+                photo=photo_file,
+                caption=caption[:1024] if caption else None,  # Telegram caption limit
+                parse_mode=ParseMode.HTML,
+            )
+            log.info("Sent infographic photo (%d KB)", len(image_bytes) // 1024)
+        except Exception as e:
+            log.error("Telegram photo send failed: %s", str(e))
+
+    async def send_infographic(self, image_bytes: bytes, caption: str = ""):
+        """Send an infographic image."""
+        if not image_bytes:
+            log.warning("No infographic image to send")
+            return
+        await self._send_photo(image_bytes, caption)
+
+    def send_infographic_sync(self, image_bytes: bytes, caption: str = ""):
+        """Synchronous wrapper for send_infographic."""
+        asyncio.run(self.send_infographic(image_bytes, caption))
+
+    async def _send_document(self, doc_bytes: bytes, filename: str, caption: str = ""):
+        """Send a document file via Telegram."""
+        if not self.bot:
+            log.info("TELEGRAM [DRY RUN]: Would send document '%s' (%d KB)", filename, len(doc_bytes) // 1024)
+            return
+
+        try:
+            doc_file = io.BytesIO(doc_bytes)
+            doc_file.name = filename
+            await self.bot.send_document(
+                chat_id=self.chat_id,
+                document=doc_file,
+                caption=caption[:1024] if caption else None,
+                parse_mode=ParseMode.HTML,
+            )
+            log.info("Sent document '%s' (%d KB)", filename, len(doc_bytes) // 1024)
+        except Exception as e:
+            log.error("Telegram document send failed: %s", str(e))
+
+    async def send_pdf(self, pdf_bytes: bytes, caption: str = ""):
+        """Send a PDF report."""
+        if not pdf_bytes:
+            log.warning("No PDF to send")
+            return
+        now = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
+        filename = f"SENTINEL_Brief_{now}.pdf"
+        await self._send_document(pdf_bytes, filename, caption)
+
+    def send_pdf_sync(self, pdf_bytes: bytes, caption: str = ""):
+        """Synchronous wrapper for send_pdf."""
+        asyncio.run(self.send_pdf(pdf_bytes, caption))
 
     async def send_status(self, message: str):
         """Send a system status message."""

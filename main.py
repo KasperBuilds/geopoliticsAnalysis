@@ -45,6 +45,7 @@ from delivery.telegram_bot import TelegramDelivery
 
 # ── Utilities ───────────────────────────────────────────────
 from utils.dedup import DedupStore
+from utils.pdf_report import PDFReportGenerator
 from utils.logger import get_logger
 
 log = get_logger("orchestrator")
@@ -68,8 +69,8 @@ def run_pipeline():
     Execute the full SENTINEL pipeline:
     1. All 6 sensors scan concurrently
     2. Sensor reports routed to appropriate analysts
-    3. Both analysts produce briefs
-    4. Briefs delivered via Telegram
+    3. PDF report generated
+    4. TL;DR + PDF delivered via Telegram
     """
     pipeline_start = time.time()
     log.info("═" * 60)
@@ -153,12 +154,34 @@ def run_pipeline():
             except Exception as e:
                 log.error("✗ Analyst %s failed: %s", name, str(e))
 
-    # ── Phase 3: Delivery ───────────────────────────────────
-    log.info("━━━ PHASE 3: TELEGRAM DELIVERY ━━━")
+    # ── Phase 3: PDF Report ─────────────────────────────────
+    log.info("━━━ PHASE 3: PDF REPORT GENERATION ━━━")
+    pdf_bytes = None
+    if briefs:
+        try:
+            pg = PDFReportGenerator()
+            pdf_bytes = pg.generate(briefs)
+            if pdf_bytes:
+                log.info("✓ PDF report ready (%d KB)", len(pdf_bytes) // 1024)
+            else:
+                log.warning("PDF generation returned None — skipping document")
+        except Exception as e:
+            log.error("PDF generation failed: %s", str(e))
+
+    # ── Phase 4: Delivery (TL;DR + PDF) ─────────────────────
+    log.info("━━━ PHASE 4: TELEGRAM DELIVERY ━━━")
     delivery = TelegramDelivery()
 
     if briefs:
-        delivery.send_briefs_sync(briefs)
+        # 1) Short TL;DR text message
+        delivery.send_tldr_sync(briefs)
+
+        # 2) PDF document attachment
+        if pdf_bytes:
+            delivery.send_pdf_sync(
+                pdf_bytes,
+                caption="📄 <b>SENTINEL PDF REPORT</b> — Full intelligence briefing",
+            )
 
         # Archive briefs
         dedup = DedupStore()
@@ -173,7 +196,7 @@ def run_pipeline():
         log.warning("No analyst briefs produced")
         delivery.send_status_sync("⚠️ Analysts produced no briefs in this cycle.")
 
-    # ── Phase 4: Cleanup ────────────────────────────────────
+    # ── Phase 5: Cleanup ────────────────────────────────────
     dedup = DedupStore()
     dedup.purge_old()
 

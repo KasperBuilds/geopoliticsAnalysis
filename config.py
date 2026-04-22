@@ -91,7 +91,7 @@ SINGAPORE_SOURCES = [
 ]
 
 THINKTANK_SOURCES = [
-    "https://www.rsis.edu.sg/feed/",
+    "https://news.google.com/rss/search?q=site:rsis.edu.sg+when:7d&hl=en-US&gl=US&ceid=US:en",
     "https://www.aspistrategist.org.au/feed/",
     "https://warontherocks.com/feed/",
     "https://news.google.com/rss/search?q=site:csis.org+Indo-Pacific+when:7d&hl=en-US&gl=US&ceid=US:en",

@@ -261,17 +261,11 @@ Be concise but insightful. Write like a senior intelligence analyst, not a journ
                 f"{dev_icon} <b>[{i}] {dev.headline}</b>",
                 f"{dev.analysis}",
             ])
-            # Show sources as clickable hyperlinks
-            if dev.source_urls and dev.sources:
-                links = []
-                for url, name in zip(dev.source_urls, dev.sources):
-                    links.append(f'<a href="{url}">{name}</a>')
-                lines.append(f"→ {' · '.join(links)}")
-            elif dev.source_urls:
-                links = [f'<a href="{url}">Source</a>' for url in dev.source_urls]
-                lines.append(f"→ {' · '.join(links)}")
+            # Show sources as bare URLs (Telegram auto-links them)
+            if dev.source_urls:
+                lines.append(f"→ {' · '.join(dev.source_urls)}")
             elif dev.sources:
-                lines.append(f"<i>→ {', '.join(dev.sources)}</i>")
+                lines.append(f"→ {', '.join(dev.sources)}")
 
         lines.extend([
             f"",
