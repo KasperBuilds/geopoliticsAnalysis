@@ -94,54 +94,50 @@ class TelegramDelivery:
             except Exception as e2:  # noqa: F841
                 log.error("Telegram send failed even without HTML: %s", str(e2))
 
-    def _bold_first_keyword(self, headline: str) -> str:
-        """
-        Bold the first significant word in a headline.
-        Skips short words (articles, prepositions) to find a meaningful keyword.
-        """
-        skip_words = {"a", "an", "the", "in", "on", "of", "to", "for", "and", "or", "by", "at", "from", "with", "as", "is", "are", "was", "were"}
-        words = headline.split()
-        for i, word in enumerate(words):
-            # Strip punctuation for comparison but keep original
-            clean = word.strip(".,;:!?–—\"'()[]")
-            if clean.lower() not in skip_words and len(clean) > 1:
-                words[i] = f"<b>{word}</b>"
-                break
-        return " ".join(words)
-
     def _format_tldr(self, briefs: list[AnalystBrief]) -> str:
         """
-        Build a short TL;DR message — just headlines + top SG implication.
+        Build a visual dashboard TL;DR message.
+        Each development gets a card with icon, what, why, and SG impact.
         Designed for quick glance on mobile. Full detail lives in the PDF.
         """
         urgency_icons = {"CRITICAL": "🔴", "ELEVATED": "🟡", "ROUTINE": "🟢"}
         urgency_order = {"CRITICAL": 3, "ELEVATED": 2, "ROUTINE": 1}
+        urgency_labels = {"CRITICAL": "Critical", "ELEVATED": "Elevated", "ROUTINE": "Routine"}
 
         overall = max(briefs, key=lambda b: urgency_order.get(b.overall_urgency, 0))
         urgency = overall.overall_urgency
         icon = urgency_icons.get(urgency, "⚪")
+        label = urgency_labels.get(urgency, urgency.title())
 
-        now = datetime.now(timezone.utc).strftime("%d %b %Y · %H%M UTC")
+        now = datetime.now(timezone.utc).strftime("%d %b %Y • %H%M UTC")
 
         lines = [
-            f"🛰️ <b>SENTINEL BRIEF</b>",
-            f"{now}",
-            f"{icon} {urgency}",
+            "🛰️ <b>SENTINEL BRIEF — VISUAL DASHBOARD</b>",
             "",
-            "<b>Top Developments</b>",
+            f"📅 {now} • {icon} {label}",
         ]
 
-        # Top headlines from all analysts as bullet points with one bold keyword
+        # Development cards from all analysts
         for brief in briefs:
-            for dev in brief.key_developments[:3]:
-                bolded = self._bold_first_keyword(dev.headline)
-                lines.append(f"• {bolded}")
+            for dev in brief.key_developments:
+                dev_icon = dev.icon or "📌"
+                lines.append("")
+                lines.append(f"{dev_icon} <b>{dev.headline}</b>")
 
-        # One key SG implication
-        for brief in briefs:
-            if brief.singapore_implications:
-                lines.extend(["", f"🇸🇬 {brief.singapore_implications[0]}"])
-                break
+                # Use dashboard fields if available, fall back to analysis
+                if dev.what:
+                    lines.append(f"What: {dev.what}")
+                if dev.why:
+                    # Use context-appropriate label
+                    why_label = "Why it matters" if "matter" not in dev.why.lower() else "Why"
+                    lines.append(f"{why_label}: {dev.why}")
+                elif dev.analysis:
+                    # Truncate analysis to first sentence as fallback
+                    first_sentence = dev.analysis.split(". ")[0] + "."
+                    lines.append(f"Why: {first_sentence}")
+
+                if dev.sg_impact:
+                    lines.append(f"🇸🇬 Impact: {dev.sg_impact}")
 
         lines.extend(["", "📄 Full report attached below."])
 

@@ -25,6 +25,11 @@ class Development(BaseModel):
     urgency: str  # CRITICAL, ELEVATED, ROUTINE
     sources: list[str] = []       # display names
     source_urls: list[str] = []   # full article URLs
+    # Dashboard-style fields for TL;DR visual
+    icon: str = ""                # topic emoji e.g. 🔫🚢🌏
+    what: str = ""                # one-line "what happened"
+    why: str = ""                 # one-line "why it matters"
+    sg_impact: str = ""           # one-line Singapore impact
 
 
 class AnalystBrief(BaseModel):
@@ -144,10 +149,14 @@ Respond in this exact JSON format:
   "executive_summary": "2-3 sentence executive summary of the strategic picture",
   "key_developments": [
     {{
-      "headline": "Development headline",
+      "headline": "Development headline (short, punchy)",
       "analysis": "2-3 sentence analysis including second-order implications",
       "urgency": "ELEVATED",
-      "article_refs": [1, 3]
+      "article_refs": [1, 3],
+      "icon": "🔫",
+      "what": "One-line summary of what happened (e.g. 'Laser weapons + space missile defense')",
+      "why": "One-line of why it matters (e.g. 'Shifts warfare → high-tech dominance')",
+      "sg_impact": "One-line Singapore impact (e.g. 'Upgrade C4ISR + interoperability')"
     }}
   ],
   "singapore_implications": [
@@ -158,7 +167,13 @@ Respond in this exact JSON format:
   ]
 }}
 
-Aim for 3-5 key developments, 3-4 Singapore implications, and 3-4 watchlist items.
+For each key_development:
+- "icon": Pick a single relevant emoji for the topic (🔫 military, 🚢 maritime, 🌏 geopolitics, 🚆 infrastructure, 🪨 resources, 💻 tech, etc.)
+- "what": Ultra-short description of the event (≤10 words)
+- "why": One line on why it matters / the risk / the effect (use → or ↓ ↑ arrows for impact)
+- "sg_impact": One line on how it impacts Singapore specifically
+
+Aim for 3-6 key developments, 3-4 Singapore implications, and 3-4 watchlist items.
 Be concise but insightful. Write like a senior intelligence analyst, not a journalist.
 """
 
@@ -195,6 +210,10 @@ Be concise but insightful. Write like a senior intelligence analyst, not a journ
                     urgency=dev.get("urgency", "ROUTINE"),
                     sources=resolved_sources,
                     source_urls=resolved_urls,
+                    icon=dev.get("icon", ""),
+                    what=dev.get("what", ""),
+                    why=dev.get("why", ""),
+                    sg_impact=dev.get("sg_impact", ""),
                 ))
 
             brief = AnalystBrief(
