@@ -124,7 +124,7 @@ class TelegramDelivery:
 
         # Group developments by category
         from collections import OrderedDict
-        categories: dict[str, list] = OrderedDict()
+        categories: dict[str, list[dict]] = OrderedDict()
         category_order = ["DEFENCE", "GEOPOLITICS", "GEOECONOMICS"]
 
         for brief in briefs:
@@ -133,29 +133,34 @@ class TelegramDelivery:
                 cat = dev.category.upper() if dev.category else fallback_cat
                 if cat not in categories:
                     categories[cat] = []
-                # Build compact one-liner
-                parts = [dev.headline]
+                # Store bullet text and SG impact separately
+                bullet = dev.headline
                 if dev.why:
-                    parts[0] += f": {dev.why}"
-                if dev.sg_impact:
-                    parts.append(f"🇸🇬 {dev.sg_impact}")
-                categories[cat].append("; ".join(parts))
+                    bullet += f": {dev.why}"
+                categories[cat].append({
+                    "bullet": bullet,
+                    "sg_impact": dev.sg_impact,
+                })
+
+        def _render_category(cat: str, items: list[dict], lines: list[str]):
+            lines.append("")
+            lines.append(f"<b><u>{cat}</u></b>")
+            for item in items:
+                lines.append(f"- {item['bullet']}")
+            # Combine SG impacts into one line
+            sg_parts = [item["sg_impact"] for item in items if item["sg_impact"]]
+            if sg_parts:
+                lines.append("")
+                lines.append(f"🇸🇬 Singapore impact: {'; '.join(sg_parts)}")
 
         # Render in defined order, then any extras
         for cat in category_order:
             if cat in categories:
-                lines.append("")
-                lines.append(f"<b><u>{cat}</u></b>")
-                for item in categories[cat]:
-                    lines.append(item)
+                _render_category(cat, categories[cat], lines)
                 del categories[cat]
 
-        # Any remaining categories not in the predefined order
         for cat, items in categories.items():
-            lines.append("")
-            lines.append(f"<b><u>{cat}</u></b>")
-            for item in items:
-                lines.append(item)
+            _render_category(cat, items, lines)
 
         return "\n".join(lines)
 
