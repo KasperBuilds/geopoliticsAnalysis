@@ -25,11 +25,10 @@ class Development(BaseModel):
     urgency: str  # CRITICAL, ELEVATED, ROUTINE
     sources: list[str] = []       # display names
     source_urls: list[str] = []   # full article URLs
-    # Dashboard-style fields for TL;DR visual
-    icon: str = ""                # topic emoji e.g. 🔫🚢🌏
-    what: str = ""                # one-line "what happened"
-    why: str = ""                 # one-line "why it matters"
-    sg_impact: str = ""           # one-line Singapore impact
+    # TL;DR compact fields
+    category: str = ""            # DEFENCE, GEOPOLITICS, or GEOECONOMICS
+    why: str = ""                 # ultra-short why it matters (e.g. "high-tech warfare shift")
+    sg_impact: str = ""           # ultra-short SG impact (e.g. "upgrade C4ISR")
 
 
 class AnalystBrief(BaseModel):
@@ -149,14 +148,13 @@ Respond in this exact JSON format:
   "executive_summary": "2-3 sentence executive summary of the strategic picture",
   "key_developments": [
     {{
-      "headline": "Development headline (short, punchy)",
+      "headline": "Short punchy headline (e.g. 'US space missile defense')",
       "analysis": "2-3 sentence analysis including second-order implications",
       "urgency": "ELEVATED",
       "article_refs": [1, 3],
-      "icon": "🔫",
-      "what": "One-line summary of what happened (e.g. 'Laser weapons + space missile defense')",
-      "why": "One-line of why it matters (e.g. 'Shifts warfare → high-tech dominance')",
-      "sg_impact": "One-line Singapore impact (e.g. 'Upgrade C4ISR + interoperability')"
+      "category": "DEFENCE",
+      "why": "ultra-short why (e.g. 'high-tech warfare shift')",
+      "sg_impact": "ultra-short SG impact (e.g. 'upgrade C4ISR')"
     }}
   ],
   "singapore_implications": [
@@ -168,10 +166,10 @@ Respond in this exact JSON format:
 }}
 
 For each key_development:
-- "icon": Pick a single relevant emoji for the topic (🔫 military, 🚢 maritime, 🌏 geopolitics, 🚆 infrastructure, 🪨 resources, 💻 tech, etc.)
-- "what": Ultra-short description of the event (≤10 words)
-- "why": One line on why it matters / the risk / the effect (use → or ↓ ↑ arrows for impact)
-- "sg_impact": One line on how it impacts Singapore specifically
+- "category": Exactly one of: "DEFENCE", "GEOPOLITICS", or "GEOECONOMICS"
+- "headline": Short punchy label (≤8 words, no verbs — noun phrases like 'US space missile defense')
+- "why": Ultra-short consequence (≤6 words, use → ↑ ↓ arrows, e.g. 'partnership shift', 'regional spillover risk')
+- "sg_impact": Ultra-short Singapore angle (≤5 words, e.g. 'upgrade C4ISR', 'maritime relevance ↓')
 
 Aim for 3-6 key developments, 3-4 Singapore implications, and 3-4 watchlist items.
 Be concise but insightful. Write like a senior intelligence analyst, not a journalist.
@@ -210,8 +208,7 @@ Be concise but insightful. Write like a senior intelligence analyst, not a journ
                     urgency=dev.get("urgency", "ROUTINE"),
                     sources=resolved_sources,
                     source_urls=resolved_urls,
-                    icon=dev.get("icon", ""),
-                    what=dev.get("what", ""),
+                    category=dev.get("category", ""),
                     why=dev.get("why", ""),
                     sg_impact=dev.get("sg_impact", ""),
                 ))

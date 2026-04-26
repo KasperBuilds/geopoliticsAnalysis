@@ -96,13 +96,18 @@ class TelegramDelivery:
 
     def _format_tldr(self, briefs: list[AnalystBrief]) -> str:
         """
-        Build a visual dashboard TL;DR message.
-        Each development gets a card with icon, what, why, and SG impact.
-        Designed for quick glance on mobile. Full detail lives in the PDF.
+        Build an ultra-compact TL;DR grouped by category.
+        Each development is one line: headline: why; 🇸🇬 sg_impact
         """
         urgency_icons = {"CRITICAL": "🔴", "ELEVATED": "🟡", "ROUTINE": "🟢"}
         urgency_order = {"CRITICAL": 3, "ELEVATED": 2, "ROUTINE": 1}
         urgency_labels = {"CRITICAL": "Critical", "ELEVATED": "Elevated", "ROUTINE": "Routine"}
+
+        # Fallback category from analyst role
+        role_to_category = {
+            "Defence Strategist": "DEFENCE",
+            "Geoeconomic Analyst": "GEOECONOMICS",
+        }
 
         overall = max(briefs, key=lambda b: urgency_order.get(b.overall_urgency, 0))
         urgency = overall.overall_urgency
@@ -112,34 +117,45 @@ class TelegramDelivery:
         now = datetime.now(timezone.utc).strftime("%d %b %Y • %H%M UTC")
 
         lines = [
-            "🛰️ <b>SENTINEL BRIEF — VISUAL DASHBOARD</b>",
+            "🛰️ <b>SENTINEL BRIEF</b>",
             "",
             f"📅 {now} • {icon} {label}",
         ]
 
-        # Development cards from all analysts
+        # Group developments by category
+        from collections import OrderedDict
+        categories: dict[str, list] = OrderedDict()
+        category_order = ["DEFENCE", "GEOPOLITICS", "GEOECONOMICS"]
+
         for brief in briefs:
+            fallback_cat = role_to_category.get(brief.analyst_role, "GEOPOLITICS")
             for dev in brief.key_developments:
-                dev_icon = dev.icon or "📌"
-                lines.append("")
-                lines.append(f"{dev_icon} <b>{dev.headline}</b>")
-
-                # Use dashboard fields if available, fall back to analysis
-                if dev.what:
-                    lines.append(f"What: {dev.what}")
+                cat = dev.category.upper() if dev.category else fallback_cat
+                if cat not in categories:
+                    categories[cat] = []
+                # Build compact one-liner
+                parts = [dev.headline]
                 if dev.why:
-                    # Use context-appropriate label
-                    why_label = "Why it matters" if "matter" not in dev.why.lower() else "Why"
-                    lines.append(f"{why_label}: {dev.why}")
-                elif dev.analysis:
-                    # Truncate analysis to first sentence as fallback
-                    first_sentence = dev.analysis.split(". ")[0] + "."
-                    lines.append(f"Why: {first_sentence}")
-
+                    parts[0] += f": {dev.why}"
                 if dev.sg_impact:
-                    lines.append(f"🇸🇬 Impact: {dev.sg_impact}")
+                    parts.append(f"🇸🇬 {dev.sg_impact}")
+                categories[cat].append("; ".join(parts))
 
-        lines.extend(["", "📄 Full report attached below."])
+        # Render in defined order, then any extras
+        for cat in category_order:
+            if cat in categories:
+                lines.append("")
+                lines.append(f"<b><u>{cat}</u></b>")
+                for item in categories[cat]:
+                    lines.append(item)
+                del categories[cat]
+
+        # Any remaining categories not in the predefined order
+        for cat, items in categories.items():
+            lines.append("")
+            lines.append(f"<b><u>{cat}</u></b>")
+            for item in items:
+                lines.append(item)
 
         return "\n".join(lines)
 
