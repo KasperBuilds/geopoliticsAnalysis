@@ -3,7 +3,7 @@ name: SENTINEL Intelligence Brief
 on:
   schedule:
     # 10:00 AM EST = 14:00 UTC
-    - cron: '0 14 * * *'
+    - cron: '0 13 * * *'
   workflow_dispatch:  # Manual trigger button in GitHub UI
 
 jobs:
