@@ -94,6 +94,21 @@ class TelegramDelivery:
             except Exception as e2:  # noqa: F841
                 log.error("Telegram send failed even without HTML: %s", str(e2))
 
+    def _bold_first_keyword(self, headline: str) -> str:
+        """
+        Bold the first significant word in a headline.
+        Skips short words (articles, prepositions) to find a meaningful keyword.
+        """
+        skip_words = {"a", "an", "the", "in", "on", "of", "to", "for", "and", "or", "by", "at", "from", "with", "as", "is", "are", "was", "were"}
+        words = headline.split()
+        for i, word in enumerate(words):
+            # Strip punctuation for comparison but keep original
+            clean = word.strip(".,;:!?–—\"'()[]")
+            if clean.lower() not in skip_words and len(clean) > 1:
+                words[i] = f"<b>{word}</b>"
+                break
+        return " ".join(words)
+
     def _format_tldr(self, briefs: list[AnalystBrief]) -> str:
         """
         Build a short TL;DR message — just headlines + top SG implication.
@@ -106,20 +121,21 @@ class TelegramDelivery:
         urgency = overall.overall_urgency
         icon = urgency_icons.get(urgency, "⚪")
 
-        now = datetime.now(timezone.utc).strftime("%d %b %Y • %H%M UTC")
+        now = datetime.now(timezone.utc).strftime("%d %b %Y · %H%M UTC")
 
         lines = [
             f"🛰️ <b>SENTINEL BRIEF</b>",
-            f"📅 {now}",
-            f"{icon} <b>{urgency}</b>",
+            f"{now}",
+            f"{icon} {urgency}",
             "",
+            "<b>Top Developments</b>",
         ]
 
-        # Top headlines from all analysts (max 5)
+        # Top headlines from all analysts as bullet points with one bold keyword
         for brief in briefs:
             for dev in brief.key_developments[:3]:
-                dev_icon = urgency_icons.get(dev.urgency, "⚪")
-                lines.append(f"{dev_icon} {dev.headline}")
+                bolded = self._bold_first_keyword(dev.headline)
+                lines.append(f"• {bolded}")
 
         # One key SG implication
         for brief in briefs:
@@ -127,7 +143,7 @@ class TelegramDelivery:
                 lines.extend(["", f"🇸🇬 {brief.singapore_implications[0]}"])
                 break
 
-        lines.extend(["", "📄 <i>Full report attached below.</i>"])
+        lines.extend(["", "📄 Full report attached below."])
 
         return "\n".join(lines)
 
