@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from config import OPENAI_API_KEY, OPENAI_MODEL
 from sensors.base_sensor import SensorReport, IntelItem
+from utils.dedup import DedupStore
 from utils.logger import get_logger
 
 
@@ -117,12 +118,23 @@ class BaseAnalyst(ABC):
 
         sensor_input, article_index = self._compile_sensor_inputs(reports)
 
+        # Layer 3: Fetch narrative context to prevent buildup repetition
+        dedup = DedupStore()
+        narrative_context = dedup.format_narrative_context()
+        if narrative_context:
+            self.log.info("Injecting %d active narrative threads into analyst prompt",
+                         len(dedup.get_active_narratives()))
+
         if not self.client:
             self.log.warning("No OpenAI API key — producing placeholder brief")
             return self._placeholder_brief(reports)
 
+        # Build the narrative awareness block (empty string if no prior narratives)
+        narrative_block = f"\n{narrative_context}\n" if narrative_context else ""
+
         prompt = f"""You have received the following intelligence items from your sensor network.
 Your task is to synthesise these into a strategic brief.
+{narrative_block}
 
 CRITICAL INSTRUCTIONS:
 1. Do NOT merely summarise each article. SYNTHESISE across sources to identify patterns, connections, and emerging trends.

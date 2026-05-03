@@ -116,8 +116,12 @@ class BaseSensor(ABC):
         keywords_lower = [k.lower() for k in self.keywords]
 
         for article in articles:
-            # Skip if already seen
+            # Layer 1: Skip if exact URL already seen
             if self.dedup.is_seen(article["url"]):
+                continue
+
+            # Layer 2: Skip if title is too similar to a recent article
+            if self.dedup.is_similar_title(article.get("title", "")):
                 continue
 
             # Keyword match on title + summary
@@ -270,9 +274,13 @@ If no articles are relevant, return {{"items": []}}
         # 3. Extract
         intel_items = self.extract(filtered)
 
-        # 4. Mark as seen
+        # 4. Mark as seen (Layer 1) + update narrative threads (Layer 3)
         self.dedup.mark_batch_seen(
             [{"url": art["url"], "title": art.get("title", "")} for art in filtered],
+            sensor=self.name,
+        )
+        self.dedup.update_narratives_batch(
+            [{"title": art.get("title", "")} for art in filtered],
             sensor=self.name,
         )
 
