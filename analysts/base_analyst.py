@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from openai import OpenAI
 from pydantic import BaseModel
 
-from config import OPENAI_API_KEY, OPENAI_MODEL
+from config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL, OPENROUTER_MODEL
 from sensors.base_sensor import SensorReport, IntelItem
 from utils.dedup import DedupStore
 from utils.logger import get_logger
@@ -60,7 +60,7 @@ class BaseAnalyst(ABC):
         self.role = self._analyst_role()
         self.system_prompt = self._system_prompt()
         self.log = get_logger(f"analyst.{self.name}")
-        self.client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+        self.client = OpenAI(api_key=OPENROUTER_API_KEY, base_url=OPENROUTER_BASE_URL) if OPENROUTER_API_KEY else None
 
     @abstractmethod
     def _analyst_name(self) -> str:
@@ -126,7 +126,7 @@ class BaseAnalyst(ABC):
                          len(dedup.get_active_narratives()))
 
         if not self.client:
-            self.log.warning("No OpenAI API key — producing placeholder brief")
+            self.log.warning("No OpenRouter API key — producing placeholder brief")
             return self._placeholder_brief(reports)
 
         # Build the narrative awareness block (empty string if no prior narratives)
@@ -189,7 +189,7 @@ Be concise but insightful. Write like a senior intelligence analyst, not a journ
 
         try:
             response = self.client.chat.completions.create(
-                model=OPENAI_MODEL,
+                model=OPENROUTER_MODEL,
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt},
@@ -337,7 +337,7 @@ Be concise but insightful. Write like a senior intelligence analyst, not a journ
                 for item in all_items[:5]
             ],
             singapore_implications=["Manual analysis required — no LLM available"],
-            watchlist=["Configure OPENAI_API_KEY for full analyst capability"],
+            watchlist=["Configure OPENROUTER_API_KEY for full analyst capability"],
         )
         brief.raw_text = self._format_brief(brief)
         return brief

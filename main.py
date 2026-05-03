@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from config import TIMEZONE, SCHEDULE_HOURS, OPENAI_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from config import TIMEZONE, SCHEDULE_HOURS, OPENROUTER_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 
 # ── Sensors ─────────────────────────────────────────────────
 from sensors.defence_sensor import DefenceSensor
@@ -213,7 +213,7 @@ def start_scheduler():
     log.info("═" * 60)
     log.info("Schedule: %s SGT daily", ", ".join(f"{h:02d}:00" for h in SCHEDULE_HOURS))
     log.info("Timezone: %s", TIMEZONE)
-    log.info("OpenAI:   %s", "✓ Configured" if OPENAI_API_KEY else "✗ NOT SET")
+    log.info("OpenRouter: %s", "✓ Configured" if OPENROUTER_API_KEY else "✗ NOT SET")
     log.info("Telegram: %s", "✓ Configured" if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID else "✗ NOT SET")
     log.info("═" * 60)
 

@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 from openai import OpenAI
 from pydantic import BaseModel
 
-from config import OPENAI_API_KEY, OPENAI_MODEL, REQUEST_DELAY
+from config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL, OPENROUTER_MODEL, REQUEST_DELAY
 from utils.dedup import DedupStore
 from utils.logger import get_logger
 from utils.scraper import fetch_rss, extract_article_text
@@ -71,7 +71,7 @@ class BaseSensor(ABC):
         self.keywords = self._keywords()
         self.log = get_logger(f"sensor.{self.name}")
         self.dedup = DedupStore()
-        self.client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+        self.client = OpenAI(api_key=OPENROUTER_API_KEY, base_url=OPENROUTER_BASE_URL) if OPENROUTER_API_KEY else None
 
     @abstractmethod
     def _sensor_name(self) -> str:
@@ -151,7 +151,7 @@ class BaseSensor(ABC):
             return []
 
         if not self.client:
-            self.log.warning("No OpenAI API key — returning keyword-filtered articles without LLM extraction")
+            self.log.warning("No OpenRouter API key — returning keyword-filtered articles without LLM extraction")
             return self._fallback_extract(articles)
 
         # Build batch prompt
@@ -206,7 +206,7 @@ If no articles are relevant, return {{"items": []}}
 
         try:
             response = self.client.chat.completions.create(
-                model=OPENAI_MODEL,
+                model=OPENROUTER_MODEL,
                 messages=[
                     {"role": "system", "content": f"You are SENTINEL's {self.domain} sensor agent. Be precise, strategic, and concise."},
                     {"role": "user", "content": prompt},
