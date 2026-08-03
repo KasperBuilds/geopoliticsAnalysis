@@ -1,0 +1,59 @@
+{
+  "brief_date": "03 Aug 2026",
+  "risk_level": "🟡 Elevated",
+  "headline": "Indo-Pacific deterrence posture tightens",
+  "overview": "Allied force movements and export-control signalling raised regional alert levels. Singapore faces rising maritime and supply-chain exposure without an immediate direct threat.",
+  "developments": [
+    {
+      "number": "01",
+      "title": "Carrier group redeploys east",
+      "summary": "A carrier strike group shifted patrol denser near key sea lanes, raising transit monitoring needs."
+    },
+    {
+      "number": "02",
+      "title": "Chip export rules expand",
+      "summary": "New semiconductor licensing tightened advanced-node access, pressuring regional fab planning."
+    },
+    {
+      "number": "03",
+      "title": "ASEAN talks stall again",
+      "summary": "Members deferred a joint maritime statement, leaving crisis-response coordination thinner."
+    }
+  ],
+  "singapore_impacts": [
+    {
+      "area": "Geopolitical posture",
+      "level": "High",
+      "explanation": "Tighter US signalling narrows Singapore's quiet hedging space"
+    },
+    {
+      "area": "MINDEF next steps",
+      "level": "Elevated",
+      "explanation": "Review RSN Malacca surveillance tempo and partner drills"
+    },
+    {
+      "area": "SAF readiness",
+      "level": "Elevated",
+      "explanation": "Raise maritime domain awareness watch for denser patrols"
+    }
+  ],
+  "watch_next": "MINDEF or RSAF notice on next bilateral maritime exercise",
+  "telegram_summary": "Elevated Indo-Pacific alert: denser naval patrols and tighter chip controls raise Singapore maritime and supply-chain exposure.",
+  "sources": [
+    {
+      "title": "Carrier group shifts Indo-Pacific patrol denser",
+      "publisher": "Defense News",
+      "url": "https://example.com/defence/carrier-patrol"
+    },
+    {
+      "title": "Export controls widen for advanced semiconductors",
+      "publisher": "Reuters",
+      "url": "https://example.com/trade/chip-controls"
+    },
+    {
+      "title": "ASEAN delays joint maritime communique",
+      "publisher": "The Diplomat",
+      "url": "https://example.com/asean/maritime-talks"
+    }
+  ]
+}

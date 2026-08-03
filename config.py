@@ -17,15 +17,38 @@ OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
+# ── Instagram / Meta Graph API ──────────────────────────────
+# Publishing is disabled by default; enable explicitly for production.
+INSTAGRAM_ACCOUNT_ID = os.getenv("INSTAGRAM_ACCOUNT_ID", "")
+META_ACCESS_TOKEN = os.getenv("META_ACCESS_TOKEN", "")
+META_GRAPH_API_VERSION = os.getenv("META_GRAPH_API_VERSION", "v21.0")
+INSTAGRAM_PUBLISH_ENABLED = os.getenv("INSTAGRAM_PUBLISH_ENABLED", "false")
+INSTAGRAM_DRY_RUN = os.getenv("INSTAGRAM_DRY_RUN", "true")
+# When true, dry-run / successful publishes can send Story previews via Telegram
+TELEGRAM_STORY_PREVIEW = os.getenv("TELEGRAM_STORY_PREVIEW", "true")
+
+# ── Public object storage (Story image hosting) ─────────────
+# local = no upload (dry-run / fixture generation)
+# s3    = AWS S3 or S3-compatible (Cloudflare R2, MinIO)
+STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local")
+S3_BUCKET = os.getenv("S3_BUCKET", "")
+S3_REGION = os.getenv("S3_REGION", "auto")
+S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID", "")
+S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "")
+S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "")  # e.g. https://xxx.r2.cloudflarestorage.com
+S3_PUBLIC_BASE_URL = os.getenv("S3_PUBLIC_BASE_URL", "")  # public CDN / bucket URL prefix
+
 # ── Schedule ────────────────────────────────────────────────
 TIMEZONE = os.getenv("TIMEZONE", "Asia/Singapore")
 SCHEDULE_HOURS = [int(h) for h in os.getenv("SCHEDULE_HOURS", "6,12,18").split(",")]
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-# ── Database ────────────────────────────────────────────────
+# ── Database & output ───────────────────────────────────────
 DATA_DIR = Path(__file__).parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 DB_PATH = DATA_DIR / "sentinel.db"
+OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", str(Path(__file__).parent / "output")))
+OUTPUT_DIR.mkdir(exist_ok=True)
 
 # ── Scraper Settings ────────────────────────────────────────
 REQUEST_TIMEOUT = 15  # seconds
