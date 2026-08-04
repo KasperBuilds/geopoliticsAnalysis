@@ -7,36 +7,51 @@
     {
       "number": "01",
       "title": "Carrier group redeploys east",
-      "summary": "A carrier strike group shifted patrol denser near key sea lanes, raising transit monitoring needs."
+      "what_changed": "A carrier strike group shifted to denser patrols near key sea lanes off the archipelago.",
+      "why_it_matters": "Heavier presence tightens deterrence signalling and raises the odds of unplanned encounters near chokepoints.",
+      "signal": "Confirmed"
     },
     {
       "number": "02",
       "title": "Chip export rules expand",
-      "summary": "New semiconductor licensing tightened advanced-node access, pressuring regional fab planning."
+      "what_changed": "New semiconductor licensing tightened advanced-node access for several regional buyers.",
+      "why_it_matters": "Squeezes fab planning and pushes states to hedge supply chains, deepening tech-bloc competition.",
+      "signal": "Reported"
     },
     {
       "number": "03",
       "title": "ASEAN talks stall again",
-      "summary": "Members deferred a joint maritime statement, leaving crisis-response coordination thinner."
+      "what_changed": "Members deferred a joint maritime statement after disagreement over wording.",
+      "why_it_matters": "Thinner coordination leaves crisis-response gaps that larger powers can exploit.",
+      "signal": "Assessed"
     }
   ],
   "singapore_impacts": [
     {
       "area": "Geopolitical posture",
       "level": "High",
-      "explanation": "Tighter US signalling narrows Singapore's quiet hedging space"
+      "explanation": "Tighter US signalling narrows Singapore's quiet hedging space",
+      "so_what": "Reaffirm neutrality; avoid being cast into either bloc"
     },
     {
       "area": "MINDEF next steps",
       "level": "Elevated",
-      "explanation": "Review RSN Malacca surveillance tempo and partner drills"
+      "explanation": "Denser patrols raise the odds of miscalculation near our approaches",
+      "so_what": "Review RSN Malacca surveillance tempo and partner drills"
     },
     {
       "area": "SAF readiness",
       "level": "Elevated",
-      "explanation": "Raise maritime domain awareness watch for denser patrols"
+      "explanation": "Heavier presence lifts monitoring demand across key sea lanes",
+      "so_what": "Raise maritime domain awareness watch for denser transits"
     }
   ],
+  "theory_lens": {
+    "theory": "Security Dilemma",
+    "tradition": "Realism",
+    "application": "Allied carrier moves are defensive signalling, but rivals read them as threats and respond in kind. Stalled ASEAN coordination removes the reassurance that could break the spiral, so each precaution stokes the next.",
+    "takeaway": "Defensive moves can still escalate; watch for reassurance signals from all sides."
+  },
   "watch_next": "MINDEF or RSAF notice on next bilateral maritime exercise",
   "telegram_summary": "Elevated Indo-Pacific alert: denser naval patrols and tighter chip controls raise Singapore maritime and supply-chain exposure.",
   "sources": [

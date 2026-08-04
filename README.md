@@ -1,20 +1,20 @@
 # SENTINEL — Multi-Agent Geopolitical Intelligence System
 
-An autonomous intelligence pipeline that scans defence, geopolitics and geoeconomics sources, synthesises Singapore-focused briefs, delivers Telegram alerts, and publishes a daily three-frame Instagram Story briefing.
+An autonomous intelligence pipeline that scans defence, geopolitics and geoeconomics sources, synthesises Singapore-focused briefs, delivers Telegram alerts, and publishes a daily four-frame Instagram Story briefing.
 
 ## Architecture
 
 ```
 Sensors (RSS) → Analyst Alpha/Bravo (OpenRouter) → PDF + Telegram TL;DR
                                               ↘ Story composer (JSON)
-                                                → Pillow Story renderer (3× 1080×1920)
+                                                → Pillow Story renderer (4× 1080×1920)
                                                 → Public object storage
                                                 → Meta Instagram Stories API
 ```
 
 - **Layer 1 — Sensors:** Defence, Geopolitics, Trade, Materials, Singapore, Think Tanks
 - **Layer 2 — Analysts:** Defence Strategist + Geoeconomic Analyst
-- **Layer 3 — Stories:** Validated Story JSON → three Story images → optional Instagram publish
+- **Layer 3 — Stories:** Validated Story JSON → four Story images → optional Instagram publish
 - **Layer 4 — Telegram:** TL;DR, PDF, urgent status, optional Story preview / publish confirmation
 
 Scheduling uses the existing APScheduler cron in Singapore time (default 06:00 / 12:00 / 18:00). GitHub Actions can also trigger `python main.py --now`.
@@ -50,7 +50,7 @@ Minimum for Telegram briefs:
 python main.py --stories-fixture
 ```
 
-This renders three PNGs from `tests/fixtures/sample_story_brief.json` into `output/` and prints their paths.
+This renders four PNGs from `tests/fixtures/sample_story_brief.json` into `output/` and prints their paths.
 
 ### 4. Run the pipeline (dry-run Instagram by default)
 
@@ -90,11 +90,12 @@ python main.py --now
 
 ## Instagram Story output
 
-Each successful cycle produces exactly three 1080×1920 images:
+Each successful cycle produces exactly four 1080×1920 images:
 
 1. **Daily overview** — brand, Singapore date, risk level, headline, overview
-2. **Top developments** — up to three items (fewer if warranted)
-3. **Singapore posture / MINDEF** — geopolitical posture and MINDEF next steps + Watch Next
+2. **Top developments** — up to three items (fewer if warranted); each shows **What changed**, **Why it matters**, and a **Confirmed / Reported / Assessed** confidence tag
+3. **Singapore posture / MINDEF** — 2–3 exposure areas, each with a **Read** (implication) and **SG Move** (concrete MINDEF/MFA response) + a Watch Next indicator
+4. **Strategic Lens** — one established political-science / IR theory (e.g. Security Dilemma, Balance of Power, Thucydides Trap, Alliance Dilemma) with a grounded explanation of how the day's developments illustrate it, plus a one-line takeaway
 
 Risk indicators: 🟢 Stable · 🟡 Elevated · 🟠 High · 🔴 Critical
 
@@ -102,7 +103,7 @@ Archives land in `output/YYYY-MM-DD/` (Singapore date) with:
 
 - `briefing.json` — structured Story payload
 - `sources.json` — grounding metadata
-- `story_01_overview.png` / `story_02_developments.png` / `story_03_singapore.png`
+- `story_01_overview.png` / `story_02_developments.png` / `story_03_singapore.png` / `story_04_lens.png`
 - `publication.json` — status, container/media IDs, errors
 
 Successful runs are not overwritten; a later run creates `output/YYYY-MM-DD/run_HHMMSS/`.

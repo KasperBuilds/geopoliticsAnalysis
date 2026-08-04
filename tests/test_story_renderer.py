@@ -9,18 +9,35 @@ from PIL import Image
 
 from analysts.story_brief import validate_story_briefing
 from utils.story_design import DEFAULT_STORY_DESIGN, StoryDesign
-from utils.story_renderer import StoryRenderer
+from utils.story_renderer import STORY_COUNT, StoryRenderer
 
 
-def test_render_all_produces_three_1080x1920_pngs(sample_briefing, tmp_path: Path):
+def test_render_all_produces_four_1080x1920_pngs(sample_briefing, tmp_path: Path):
     renderer = StoryRenderer()
     paths = renderer.render_all(sample_briefing, tmp_path)
-    assert len(paths) == 3
+    assert len(paths) == STORY_COUNT == 4
+    assert paths[-1].name == "story_04_lens.png"
     for path in paths:
         assert path.exists()
         with Image.open(path) as img:
             assert img.size == (1080, 1920)
             assert img.format == "PNG"
+
+
+def test_theory_story_renders_within_canvas(sample_briefing):
+    renderer = StoryRenderer()
+    img = renderer.render_theory(sample_briefing)
+    assert img.size == (1080, 1920)
+
+
+def test_theory_story_handles_long_application(sample_briefing_dict, tmp_path: Path):
+    data = deepcopy(sample_briefing_dict)
+    data["theory_lens"]["application"] = " ".join(["escalation"] * 48)
+    data["theory_lens"]["takeaway"] = " ".join(["watch"] * 18)
+    briefing = validate_story_briefing(data)
+    renderer = StoryRenderer()
+    img = renderer.render_theory(briefing)
+    assert img.size == (1080, 1920)
 
 
 def test_overview_keeps_content_inside_safe_zones(sample_briefing):

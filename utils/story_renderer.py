@@ -1,6 +1,6 @@
 """
 SENTINEL — Instagram Story Renderer
-Deterministic Pillow rendering of three 1080×1920 Story images.
+Deterministic Pillow rendering of four 1080×1920 Story images.
 No generative image models — typography and layout only.
 """
 
@@ -16,13 +16,16 @@ from utils.story_design import DEFAULT_STORY_DESIGN, StoryDesign
 
 log = get_logger("story_renderer")
 
+# Number of Story images produced per run (overview, developments, singapore, lens)
+STORY_COUNT = 4
+
 
 class StoryRenderError(Exception):
     """Raised when Story image rendering fails."""
 
 
 class StoryRenderer:
-    """Renders exactly three Instagram Story PNGs from a validated briefing."""
+    """Renders the Instagram Story PNGs from a validated briefing."""
 
     def __init__(self, design: StoryDesign | None = None):
         self.design = design or DEFAULT_STORY_DESIGN
@@ -51,9 +54,12 @@ class StoryRenderer:
             "dev_number": (d.font_dev_number, True),
             "dev_title": (d.font_dev_title, True),
             "dev_body": (d.font_dev_body, False),
+            "label": (d.font_label, True),
             "impact_area": (d.font_impact_area, True),
             "impact_body": (d.font_impact_body, False),
             "watch": (d.font_watch, False),
+            "theory_name": (d.font_theory_name, True),
+            "theory_body": (d.font_theory_body, False),
             "small": (d.font_small, False),
         }
         for name, (size, bold) in specs.items():
@@ -168,8 +174,8 @@ class StoryRenderer:
 
     def render_all(self, briefing: StoryBriefing, output_dir: Path) -> list[Path]:
         """
-        Render three Story images into output_dir.
-        Returns paths in publish order: overview, developments, singapore.
+        Render the Story images into output_dir.
+        Returns paths in publish order: overview, developments, singapore, lens.
         """
         output_dir.mkdir(parents=True, exist_ok=True)
         try:
@@ -182,6 +188,10 @@ class StoryRenderer:
                 self._save(
                     self.render_singapore(briefing),
                     output_dir / "story_03_singapore.png",
+                ),
+                self._save(
+                    self.render_theory(briefing),
+                    output_dir / "story_04_lens.png",
                 ),
             ]
             for path in paths:
@@ -264,13 +274,15 @@ class StoryRenderer:
             self._draw_footer_mark(draw)
             return img
 
-        available = d.content_bottom - y
+        cards_bottom = d.content_bottom - d.footer_reserve
+        available = cards_bottom - y
         slot = available // max(len(briefing.developments), 1)
 
         for dev in briefing.developments:
-            if y + 80 > d.content_bottom:
+            if y + 80 > cards_bottom:
                 break
-            block_bottom = min(y + slot - 16, d.content_bottom)
+            block_bottom = min(y + slot - 16, cards_bottom)
+            signal_color = d.signal_colors.get(dev.signal, d.accent)
             # Panel
             draw.rounded_rectangle(
                 [(d.margin_x, y), (d.width - d.margin_x, block_bottom)],
@@ -279,48 +291,174 @@ class StoryRenderer:
                 outline=d.divider,
                 width=1,
             )
-            inner_x = d.margin_x + 28
-            cy = y + 28
+            # Signal-coloured left accent bar
+            draw.rectangle(
+                [(d.margin_x, y + 14), (d.margin_x + 6, block_bottom - 14)],
+                fill=signal_color,
+            )
+            inner_x = d.margin_x + 30
+            text_w = (d.width - d.margin_x) - inner_x - 28
+            cy = y + 24
 
-            num_color = d.accent
+            # Top row: number + signal chip
             draw.text(
                 (inner_x, cy),
                 dev.number,
                 font=self.fonts["dev_number"],
-                fill=num_color,
+                fill=signal_color,
             )
-            cy += 48
+            chip = dev.signal.upper()
+            chip_w = int(draw.textlength(chip, font=self.fonts["small"]) + 28)
+            chip_x = (d.width - d.margin_x) - 28 - chip_w
+            draw.rounded_rectangle(
+                [(chip_x, cy + 2), (chip_x + chip_w, cy + 34)],
+                radius=8,
+                fill=tuple(c // 5 for c in signal_color),
+                outline=signal_color,
+                width=1,
+            )
+            draw.text((chip_x + 14, cy + 7), chip, font=self.fonts["small"], fill=signal_color)
+            cy += 50
 
+            # Title
             title_font, t_lines = self._fit_font(
                 draw,
                 dev.title,
                 d.font_dev_title,
                 bold=True,
-                max_w=d.content_width - 56,
+                max_w=text_w,
                 max_lines=2,
                 min_size=26,
             )
             for line in t_lines:
                 draw.text((inner_x, cy), line, font=title_font, fill=d.white)
-                cy += int(getattr(title_font, "size", 40) * 1.2)
+                cy += int(getattr(title_font, "size", 38) * 1.18)
+            cy += 8
 
-            cy += 12
-            body_font, b_lines = self._fit_font(
-                draw,
-                dev.summary,
-                d.font_dev_body,
-                bold=False,
-                max_w=d.content_width - 56,
-                max_lines=d.max_dev_summary_lines,
-                min_size=22,
-            )
-            for line in b_lines:
-                if cy + 30 > block_bottom - 20:
+            # "What changed" and "Why it matters" labelled blocks
+            for label, text, max_lines in (
+                ("WHAT CHANGED", dev.what_changed, d.max_dev_changed_lines),
+                ("WHY IT MATTERS", dev.why_it_matters, d.max_dev_why_lines),
+            ):
+                if cy + 26 > block_bottom - 16:
                     break
-                draw.text((inner_x, cy), line, font=body_font, fill=d.muted)
-                cy += int(getattr(body_font, "size", 30) * 1.3)
+                draw.text((inner_x, cy), label, font=self.fonts["label"], fill=signal_color)
+                cy += 28
+                body_font, b_lines = self._fit_font(
+                    draw,
+                    text,
+                    d.font_dev_body,
+                    bold=False,
+                    max_w=text_w,
+                    max_lines=max_lines,
+                    min_size=22,
+                )
+                for line in b_lines:
+                    if cy + 26 > block_bottom - 12:
+                        break
+                    draw.text((inner_x, cy), line, font=body_font, fill=d.white)
+                    cy += int(getattr(body_font, "size", 28) * 1.25)
+                cy += 10
 
             y = block_bottom + 20
+
+        self._draw_footer_mark(draw)
+        return img
+
+    def render_theory(self, briefing: StoryBriefing) -> Image.Image:
+        """Story 4 — political-science / IR theory lens on the day."""
+        d = self.design
+        lens = briefing.theory_lens
+        img, draw = self._new_canvas()
+        y = d.content_top
+
+        draw.text((d.margin_x, y), d.brand_name, font=self.fonts["brand"], fill=d.accent)
+        y += 52
+        draw.text((d.margin_x, y), "STRATEGIC LENS", font=self.fonts["section"], fill=d.white)
+        y += 40
+        draw.text((d.margin_x, y), briefing.brief_date, font=self.fonts["date"], fill=d.muted)
+        y += 50
+        draw.rectangle([(d.margin_x, y), (d.width - d.margin_x, y + 2)], fill=d.divider)
+        y += d.content_gap
+
+        # Theory name (large, may wrap to 2 lines)
+        name_font, n_lines = self._fit_font(
+            draw,
+            lens.theory,
+            d.font_theory_name,
+            bold=True,
+            max_w=d.content_width,
+            max_lines=2,
+            min_size=34,
+        )
+        for line in n_lines:
+            draw.text((d.margin_x, y), line, font=name_font, fill=d.accent)
+            y += int(getattr(name_font, "size", 54) * 1.16)
+
+        # Tradition chip
+        if lens.tradition:
+            chip = lens.tradition.upper()
+            chip_w = int(draw.textlength(chip, font=self.fonts["label"]) + 32)
+            draw.rounded_rectangle(
+                [(d.margin_x, y + 4), (d.margin_x + chip_w, y + 40)],
+                radius=8,
+                fill=tuple(c // 5 for c in d.accent),
+                outline=d.accent,
+                width=1,
+            )
+            draw.text((d.margin_x + 16, y + 9), chip, font=self.fonts["label"], fill=d.accent)
+            y += 54
+        y += d.content_gap
+
+        # Takeaway box geometry (pinned near the bottom safe zone)
+        box_bottom = d.content_bottom - d.footer_reserve
+        box_top = box_bottom - 170
+
+        # Application — how today's events illustrate the theory
+        draw.text((d.margin_x, y), "HOW TODAY MAPS TO IT", font=self.fonts["label"], fill=d.muted)
+        y += 34
+        app_font, a_lines = self._fit_font(
+            draw,
+            lens.application,
+            d.font_theory_body,
+            bold=False,
+            max_w=d.content_width,
+            max_lines=d.max_theory_lines,
+            min_size=24,
+        )
+        for line in a_lines:
+            line_h = int(getattr(app_font, "size", 30) * 1.34)
+            if y + line_h > box_top - 24:
+                break
+            draw.text((d.margin_x, y), line, font=app_font, fill=d.white)
+            y += line_h
+
+        draw.rounded_rectangle(
+            [(d.margin_x, box_top), (d.width - d.margin_x, box_bottom)],
+            radius=16,
+            fill=d.bg_accent,
+            outline=d.accent,
+            width=2,
+        )
+        draw.text(
+            (d.margin_x + 28, box_top + 22),
+            "TAKEAWAY",
+            font=self.fonts["label"],
+            fill=d.accent,
+        )
+        tk_font, tk_lines = self._fit_font(
+            draw,
+            lens.takeaway,
+            d.font_watch,
+            bold=False,
+            max_w=d.content_width - 56,
+            max_lines=d.max_theory_takeaway_lines,
+            min_size=22,
+        )
+        ty = box_top + 60
+        for line in tk_lines:
+            draw.text((d.margin_x + 28, ty), line, font=tk_font, fill=d.white)
+            ty += int(getattr(tk_font, "size", 30) * 1.3)
 
         self._draw_footer_mark(draw)
         return img
@@ -345,52 +483,89 @@ class StoryRenderer:
         draw.rectangle([(d.margin_x, y), (d.width - d.margin_x, y + 2)], fill=d.divider)
         y += d.content_gap
 
-        for impact in briefing.singapore_impacts:
-            if y + 120 > d.content_bottom - 220:
+        # Reserve a fixed Watch Next box at the bottom; cards fill the space above it
+        watch_h = 176
+        watch_bottom = d.content_bottom - d.footer_reserve
+        watch_top = watch_bottom - watch_h
+        cards_bottom = watch_top - 22
+
+        impacts = briefing.singapore_impacts
+        available = cards_bottom - y
+        slot = available // max(len(impacts), 1)
+
+        for impact in impacts:
+            if y + 96 > cards_bottom:
                 break
+            block_bottom = min(y + slot - 14, cards_bottom)
             level_color = d.risk_colors.get(impact.level, d.risk_elevated)
             draw.rounded_rectangle(
-                [(d.margin_x, y), (d.width - d.margin_x, y + 150)],
+                [(d.margin_x, y), (d.width - d.margin_x, block_bottom)],
                 radius=16,
                 fill=d.panel,
                 outline=d.divider,
+                width=1,
             )
             # Level accent bar
             draw.rectangle(
-                [(d.margin_x, y + 16), (d.margin_x + 6, y + 134)],
+                [(d.margin_x, y + 14), (d.margin_x + 6, block_bottom - 14)],
                 fill=level_color,
             )
-            ix = d.margin_x + 28
-            draw.text((ix, y + 22), impact.area.upper(), font=self.fonts["impact_area"], fill=d.white)
-            badge = impact.level.upper()
-            draw.text((ix, y + 64), badge, font=self.fonts["small"], fill=level_color)
+            inner_x = d.margin_x + 30
+            text_w = (d.width - d.margin_x) - inner_x - 28
+            cy = y + 22
 
-            expl_font, e_lines = self._fit_font(
-                draw,
-                impact.explanation,
-                d.font_impact_body,
-                bold=False,
-                max_w=d.content_width - 56,
-                max_lines=d.max_impact_lines,
-                min_size=20,
+            # Area title + level chip on the top row
+            draw.text((inner_x, cy), impact.area.upper(), font=self.fonts["impact_area"], fill=d.white)
+            chip = impact.level.upper()
+            chip_w = int(draw.textlength(chip, font=self.fonts["small"]) + 28)
+            chip_x = (d.width - d.margin_x) - 28 - chip_w
+            draw.rounded_rectangle(
+                [(chip_x, cy + 4), (chip_x + chip_w, cy + 36)],
+                radius=8,
+                fill=tuple(c // 5 for c in level_color),
+                outline=level_color,
+                width=1,
             )
-            ey = y + 96
-            for line in e_lines:
-                draw.text((ix, ey), line, font=expl_font, fill=d.muted)
-                ey += int(getattr(expl_font, "size", 28) * 1.25)
-            y += 170
+            draw.text((chip_x + 14, cy + 9), chip, font=self.fonts["small"], fill=level_color)
+            cy += 50
 
-        # Watch Next block — pinned above bottom safe zone
-        watch_top = min(y + 10, d.content_bottom - 200)
+            # "Read" (implication) and "SG move" (recommended response)
+            for label, text, color in (
+                ("READ", impact.explanation, d.muted),
+                ("SG MOVE", impact.so_what, d.white),
+            ):
+                if cy + 24 > block_bottom - 14:
+                    break
+                draw.text((inner_x, cy), label, font=self.fonts["label"], fill=level_color)
+                cy += 26
+                body_font, b_lines = self._fit_font(
+                    draw,
+                    text,
+                    d.font_impact_body,
+                    bold=False,
+                    max_w=text_w,
+                    max_lines=d.max_impact_lines,
+                    min_size=20,
+                )
+                for line in b_lines:
+                    if cy + 24 > block_bottom - 10:
+                        break
+                    draw.text((inner_x, cy), line, font=body_font, fill=color)
+                    cy += int(getattr(body_font, "size", 28) * 1.24)
+                cy += 8
+
+            y = block_bottom + 18
+
+        # Watch Next block — fixed size, pinned above the footer
         draw.rounded_rectangle(
-            [(d.margin_x, watch_top), (d.width - d.margin_x, d.content_bottom - 20)],
+            [(d.margin_x, watch_top), (d.width - d.margin_x, watch_bottom)],
             radius=16,
             fill=d.bg_accent,
             outline=d.accent,
             width=2,
         )
         draw.text(
-            (d.margin_x + 28, watch_top + 24),
+            (d.margin_x + 28, watch_top + 22),
             "WATCH NEXT",
             font=self.fonts["section"],
             fill=d.accent,
@@ -404,10 +579,13 @@ class StoryRenderer:
             max_lines=d.max_watch_lines,
             min_size=22,
         )
-        wy = watch_top + 70
+        wy = watch_top + 68
         for line in w_lines:
+            line_h = int(getattr(watch_font, "size", 30) * 1.3)
+            if wy + line_h > watch_bottom - 14:
+                break
             draw.text((d.margin_x + 28, wy), line, font=watch_font, fill=d.white)
-            wy += int(getattr(watch_font, "size", 30) * 1.3)
+            wy += line_h
 
         self._draw_footer_mark(draw)
         return img

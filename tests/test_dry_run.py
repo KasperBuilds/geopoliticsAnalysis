@@ -9,6 +9,7 @@ from analysts.base_analyst import AnalystBrief, Development
 from delivery.instagram import InstagramClient, InstagramStoryPublisher
 from main import run_stories_fixture
 from utils.archive import RunArchive
+from utils.story_renderer import STORY_COUNT
 
 
 def _sample_briefs() -> list[AnalystBrief]:
@@ -58,7 +59,7 @@ def test_publisher_disabled_by_default_semantics(tmp_path: Path):
 
 def test_stories_fixture_command_writes_images(tmp_path: Path):
     paths = run_stories_fixture(tmp_path)
-    assert len(paths) == 3
+    assert len(paths) == STORY_COUNT == 4
     assert all(p.exists() for p in paths)
     # briefing archive should exist somewhere under output
     assert any(paths)
@@ -88,6 +89,11 @@ def test_story_composer_fallback_without_llm():
     assert briefing.headline
     assert 1 <= len(briefing.developments) <= 3
     assert 2 <= len(briefing.singapore_impacts) <= 3
+    # Enriched fields + theory lens must be populated even offline
+    assert briefing.developments[0].what_changed
+    assert briefing.developments[0].why_it_matters
+    assert briefing.theory_lens.theory
+    assert briefing.theory_lens.application
 
 
 def test_run_instagram_phase_dry_run_no_upload(tmp_path: Path, sample_briefing):
@@ -109,6 +115,7 @@ def test_run_instagram_phase_dry_run_no_upload(tmp_path: Path, sample_briefing):
             tmp_path / "story_01_overview.png",
             tmp_path / "story_02_developments.png",
             tmp_path / "story_03_singapore.png",
+            tmp_path / "story_04_lens.png",
         ]
         for p in renderer_cls.return_value.render_all.return_value:
             p.write_bytes(b"fake-png")

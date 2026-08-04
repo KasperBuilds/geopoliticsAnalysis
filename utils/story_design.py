@@ -24,6 +24,7 @@ class StoryDesign:
     # Margins inside the safe content band
     margin_x: int = 72
     content_gap: int = 28
+    footer_reserve: int = 46  # room for the brand footer mark
 
     # Branding
     brand_name: str = "SENTINEL"
@@ -51,21 +52,32 @@ class StoryDesign:
     font_headline: int = 56
     font_overview: int = 34
     font_section: int = 26
-    font_dev_number: int = 36
-    font_dev_title: int = 40
-    font_dev_body: int = 30
+    font_dev_number: int = 34
+    font_dev_title: int = 38
+    font_dev_body: int = 28
+    font_label: int = 22
     font_impact_area: int = 32
     font_impact_body: int = 28
     font_watch: int = 30
+    font_theory_name: int = 54
+    font_theory_body: int = 30
     font_small: int = 22
 
     # Text overflow
     max_headline_lines: int = 3
     max_overview_lines: int = 6
-    max_dev_summary_lines: int = 4
+    max_dev_changed_lines: int = 2
+    max_dev_why_lines: int = 2
     max_impact_lines: int = 2
     max_watch_lines: int = 3
+    max_theory_lines: int = 7
+    max_theory_takeaway_lines: int = 3
     ellipsis: str = "…"
+
+    # Confidence-signal accent colours (Story 2)
+    signal_confirmed: tuple[int, int, int] = (63, 185, 80)
+    signal_reported: tuple[int, int, int] = (0, 180, 216)
+    signal_assessed: tuple[int, int, int] = (255, 185, 0)
 
     # Font search paths (macOS + Linux CI)
     font_regular_paths: tuple[tuple[str, int | None], ...] = (
@@ -91,6 +103,14 @@ class StoryDesign:
             "Elevated": self.risk_elevated,
             "High": self.risk_high,
             "Critical": self.risk_critical,
+        }
+
+    @property
+    def signal_colors(self) -> dict[str, tuple[int, int, int]]:
+        return {
+            "Confirmed": self.signal_confirmed,
+            "Reported": self.signal_reported,
+            "Assessed": self.signal_assessed,
         }
 
     @property

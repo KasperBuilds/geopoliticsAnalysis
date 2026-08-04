@@ -65,7 +65,7 @@ from delivery.instagram import InstagramStoryPublisher, InstagramPublishReport
 # ── Utilities ───────────────────────────────────────────────
 from utils.dedup import DedupStore
 from utils.pdf_report import PDFReportGenerator
-from utils.story_renderer import StoryRenderer, StoryRenderError
+from utils.story_renderer import STORY_COUNT, StoryRenderer, StoryRenderError
 from utils.storage import PublicObjectStorage, StorageError
 from utils.archive import RunArchive
 from utils.logger import get_logger
@@ -181,10 +181,11 @@ def run_instagram_story_phase(
             log.info("Generated Story image: %s", path)
 
     report = publisher.publish_stories(image_paths, image_urls or None)
+    total_stories = len(image_paths)
     success = (
         report.all_published
         if publisher.should_publish()
-        else report.error is None and len(image_paths) == 3
+        else report.error is None and total_stories == STORY_COUNT
     )
     archive.save_publication(
         run_dir,
@@ -205,7 +206,7 @@ def run_instagram_story_phase(
         try:
             if publisher.should_publish() and report.all_published:
                 delivery.send_status_sync(
-                    f"✅ Instagram Stories published ({report.published_count}/3)\n"
+                    f"✅ Instagram Stories published ({report.published_count}/{total_stories})\n"
                     f"{briefing.risk_level} — {briefing.headline}\n"
                     f"{briefing.telegram_summary}"
                 )
@@ -213,7 +214,7 @@ def run_instagram_story_phase(
                 _notify_error(
                     delivery,
                     f"Instagram publish incomplete "
-                    f"({report.published_count}/3 published). {report.error}",
+                    f"({report.published_count}/{total_stories} published). {report.error}",
                 )
             else:
                 # Dry-run preview: send first story image + summary
